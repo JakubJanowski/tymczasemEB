@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -14,15 +15,119 @@ namespace DNA {
         private int[,] D;           // edit distances matrix
         private int[,] S;           // similiarities matrix
 
+        private bool similiarityMatrixExists = false;
+        private bool isRNA;
+
         private enum MatchingType { Minimal, Maximal }
 
-        public DNAMatcher(string sequence1, string sequence2, int[,] distanceMatrix, int[,] similiarityMatrix) {
-            u = sequence1.Select(c => DNAToByte(c)).ToArray();
-            w = sequence2.Select(c => DNAToByte(c)).ToArray();
+        private enum AminoAcids {
+            STOP,
+            Met,
+            Phe,
+            Leu,
+            Ser,
+            Tyr,
+            Cys,
+            Trp,
+            Pro,
+            His,
+            Gln,
+            Arg,
+            Ile,
+            Thr,
+            Asn,
+            Lys,
+            Val,
+            Ala,
+            Asp,
+            Glu,
+            Gly,
+            None
+        }
+
+        public DNAMatcher(string sequence1, string sequence2, int[,] distanceMatrix, int[,] similiarityMatrix, bool isRNA = false) {
+            if (isRNA) {
+                u = sequence1.Select(c => RNAToByte(c)).ToArray();
+                w = sequence2.Select(c => RNAToByte(c)).ToArray();
+            }
+            else {
+                u = sequence1.Select(c => DNAToByte(c)).ToArray();
+                w = sequence2.Select(c => DNAToByte(c)).ToArray();
+            }
             n = u.Length;
             m = w.Length;
             d = distanceMatrix;
             s = similiarityMatrix;
+            this.isRNA = isRNA;
+        }
+
+        private byte RNAToByte(char c) {
+            Dictionary<string, AminoAcids> dict = new Dictionary<string, AminoAcids>() {
+                { "UUU", AminoAcids.Phe},
+                {"UUC", AminoAcids.Phe},
+                {"UUA", AminoAcids.Leu},
+                {"UUG", AminoAcids.Leu},
+                {"UCU", AminoAcids.Ser},
+                {"UCC", AminoAcids.Ser},
+                {"UCA", AminoAcids.Ser},
+                {"UCG", AminoAcids.Ser},
+                {"UAU", AminoAcids.Tyr},
+                {"UAC", AminoAcids.Tyr},
+                {"UAA", AminoAcids.STOP},
+                {"UAG", AminoAcids.STOP},
+                {"UGU", AminoAcids.Cys},
+                {"UGC", AminoAcids.Cys},
+                {"UGA", AminoAcids.STOP},
+                {"UGG", AminoAcids.Trp},
+                {"CUU", AminoAcids.Leu},
+                {"CUC", AminoAcids.Leu},
+                {"CUA", AminoAcids.Leu},
+                {"CUG", AminoAcids.Leu},
+                {"CCU", AminoAcids.Pro},
+                {"CCC", AminoAcids.Pro},
+                {"CCA", AminoAcids.Pro},
+                {"CCG", AminoAcids.Pro},
+                {"CAU", AminoAcids.His},
+                {"CAC", AminoAcids.His},
+                {"CAA", AminoAcids.Gln},
+                {"CAG", AminoAcids.Gln},
+                {"CGU", AminoAcids.Arg},
+                {"CGC", AminoAcids.Arg},
+                {"CGA", AminoAcids.Arg},
+                {"CGG", AminoAcids.Arg},
+                {"AUU", AminoAcids.Ile},
+                {"AUC", AminoAcids.Ile},
+                {"AUA", AminoAcids.Ile},
+                {"AUG", AminoAcids.Met},
+                {"ACU", AminoAcids.Thr},
+                {"ACC", AminoAcids.Thr},
+                {"ACA", AminoAcids.Thr},
+                {"ACG", AminoAcids.Thr},
+                {"AAU", AminoAcids.Asn},
+                {"AAC", AminoAcids.Asn},
+                {"AAA", AminoAcids.Lys},
+                {"AAG", AminoAcids.Lys},
+                {"AGU", AminoAcids.Ser},
+                {"AGC", AminoAcids.Ser},
+                {"AGA", AminoAcids.Arg},
+                {"AGG", AminoAcids.Arg},
+                {"GUU", AminoAcids.Val},
+                {"GUC", AminoAcids.Val},
+                {"GUA", AminoAcids.Val},
+                {"GUG", AminoAcids.Val},
+                {"GCU", AminoAcids.Ala},
+                {"GCC", AminoAcids.Ala},
+                {"GCA", AminoAcids.Ala},
+                {"GCG", AminoAcids.Ala},
+                {"GAU", AminoAcids.Asp},
+                {"GAC", AminoAcids.Asp},
+                {"GAA", AminoAcids.Glu},
+                {"GAG", AminoAcids.Glu},
+                {"GGU", AminoAcids.Gly},
+                {"GGC", AminoAcids.Gly},
+                {"GGA", AminoAcids.Gly},
+                {"GGG", AminoAcids.Gly}};
+            return 0;
         }
 
         public int ComputeEditDistance(out string[] matching) {
@@ -58,9 +163,12 @@ namespace DNA {
         }
 
         public int ComputeSimiliarity(out string[] matching) {
+            if (isRNA)
+                return ComputeRNASimiliarity(out matching);
+
             int n = u.Length;
             int m = w.Length;
-            int[,] S = new int[n + 1, m + 1];
+            S = new int[n + 1, m + 1];
             S[0, 0] = 0;
 
             for (int j = 1; j <= m; j++) {
@@ -84,11 +192,40 @@ namespace DNA {
                 }
             }
 
+            similiarityMatrixExists = true;
             PrintMatrix(S);
 
             matching = GetMatching(S, MatchingType.Maximal);
 
             return S[n, m];
+        }
+
+        private int ComputeRNASimiliarity(out string[] matching) {
+            matching = null;
+            return 0;
+        }
+
+        public int ComputeLocalMatching(out string[] matching) {
+            if (!similiarityMatrixExists)
+                ComputeSimiliarity(out matching);
+
+            int x = 0;
+            int y = 0;
+            int max = 0;
+
+            for (int i = 0; i <= n; i++) {
+                for (int j = 0; j <= m; j++) {
+                    if (max < S[i, j]) {
+                        max = S[i, j];
+                        x = i;
+                        y = j;
+                    }
+                }
+            }
+
+            matching = GetMatching(S, MatchingType.Maximal, true, x, y);
+
+            return max;
         }
 
         private static byte DNAToByte(char c) {
@@ -131,24 +268,23 @@ namespace DNA {
             for (int j = 0; j <= m; j++) {
                 if (j > 0)
                     Console.Write(ByteToDNA(w[j - 1]) + " ");
-                for (int i = 0; i <= n; i++) {
+                for (int i = 0; i <= n; i++)
                     Console.Write(M[i, j].ToString().PadLeft(padLenght));
-                }
                 Console.WriteLine();
             }
         }
 
 
-        private string[] GetMatching(int[,] matrix, MatchingType matchingType) {
-            int x = n;
-            int y = m;
+        private string[] GetMatching(int[,] matrix, MatchingType matchingType, bool stopAtNonPositive = false, int? startX = null, int? startY = null) {
+            int x = startX ?? n;
+            int y = startY ?? m;
             int lastX = x;
             int lastY = y;
 
             StringBuilder sequence1 = new StringBuilder();
             StringBuilder sequence2 = new StringBuilder();
 
-            while (x != 0 && y != 0) {
+            while ((x != 0 && y != 0) || (stopAtNonPositive && matrix[x, y] > 0)) {
                 GetNextField(matrix, matchingType, ref x, ref y);
 
                 if (x == lastX) {
