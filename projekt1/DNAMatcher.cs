@@ -16,7 +16,7 @@ namespace DNA {
         private int[,] S;           // similiarities matrix
 
         private bool similiarityMatrixExists = false;
-        private bool isRNA;
+        private readonly bool isRNA;
 
         private enum MatchingType { Minimal, Maximal }
 
@@ -45,7 +45,7 @@ namespace DNA {
             None
         }
 
-        private static Dictionary<string, AminoAcids> aminoAcidCodons = new Dictionary<string, AminoAcids>() {
+        private static readonly Dictionary<string, AminoAcids> aminoAcidCodons = new Dictionary<string, AminoAcids>() {
                 {"UUU", AminoAcids.Phe},
                 {"UUC", AminoAcids.Phe},
                 {"UUA", AminoAcids.Leu},
