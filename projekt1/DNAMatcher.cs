@@ -118,8 +118,8 @@ namespace DNA {
                 w = sequence2.SplitInParts(3).Select(s => RNAToByte(s)).ToArray();
             }
             else {
-                u = sequence1.Select(c => DNAToByte(c)).ToArray();
-                w = sequence2.Select(c => DNAToByte(c)).ToArray();
+                u = sequence1.Select(c => StringToByte(c)).ToArray();
+                w = sequence2.Select(c => StringToByte(c)).ToArray();
             }
             n = u.Length;
             m = w.Length;
@@ -134,13 +134,13 @@ namespace DNA {
 
             for (int j = 1; j <= m; j++) {
                 for (int k = 0; k < j; k++) {
-                    D[0, j] += d[DNAToByte('_'), w[k]];
+                    D[0, j] += d[StringToByte('_'), w[k]];
                 }
             }
 
             for (int i = 1; i <= n; i++) {
                 for (int k = 0; k < i; k++) {
-                    D[i, 0] += d[u[k], DNAToByte('_')];
+                    D[i, 0] += d[u[k], StringToByte('_')];
                 }
             }
 
@@ -148,8 +148,8 @@ namespace DNA {
                 for (int j = 1; j <= m; j++) {
                     D[i, j] = Math.Min(
                         D[i - 1, j - 1] + d[u[i - 1], w[j - 1]], Math.Min(
-                        D[i, j - 1] + d[DNAToByte('_'), w[j - 1]],
-                        D[i - 1, j] + d[u[i - 1], DNAToByte('_')]));
+                        D[i, j - 1] + d[StringToByte('_'), w[j - 1]],
+                        D[i - 1, j] + d[u[i - 1], StringToByte('_')]));
                 }
             }
 
@@ -161,8 +161,8 @@ namespace DNA {
         }
 
         public int ComputeSimiliarity(out string[] matching) {
-            if (isRNA)
-                return ComputeRNASimiliarity(out matching);
+            //if (isRNA)
+            //    return ComputeRNASimiliarity(out matching);
 
             int n = u.Length;
             int m = w.Length;
@@ -171,28 +171,31 @@ namespace DNA {
 
             for (int j = 1; j <= m; j++) {
                 for (int k = 0; k < j; k++) {
-                    S[0, j] += s[DNAToByte('_'), w[k]];
+                        S[0, j] += s[StringToByte('_'), w[k]];
                 }
             }
 
             for (int i = 1; i <= n; i++) {
                 for (int k = 0; k < i; k++) {
-                    S[i, 0] += s[u[k], DNAToByte('_')];
+                        S[i, 0] += s[u[k], StringToByte('_')];
                 }
             }
 
             for (int i = 1; i <= n; i++) {
                 for (int j = 1; j <= m; j++) {
-                    S[i, j] = Math.Max(
-                        S[i - 1, j - 1] + s[u[i - 1], w[j - 1]], Math.Max(
-                        S[i, j - 1] + s[DNAToByte('_'), w[j - 1]],
-                        S[i - 1, j] + s[u[i - 1], DNAToByte('_')]));
+                        S[i, j] = Math.Max(
+                            S[i - 1, j - 1] + s[u[i - 1], w[j - 1]], Math.Max(
+                                S[i, j - 1] + s[StringToByte('_'), w[j - 1]],
+                                S[i - 1, j] + s[u[i - 1], StringToByte('_')]));
+
                 }
             }
 
+            // TODO for RNA
             similiarityMatrixExists = true;
             PrintMatrix(S);
 
+            // TODO for RNA
             matching = GetMatching(S, MatchingType.Maximal);
 
             return S[n, m];
@@ -226,18 +229,42 @@ namespace DNA {
             return max;
         }
 
-        private static byte DNAToByte(char c) {
-            switch (c) {
-                case 'A':
-                    return 0;
-                case 'C':
-                    return 1;
-                case 'G':
-                    return 2;
-                case 'T':
-                    return 3;
+
+
+        private byte StringToByte(char c)
+        {
+            byte DNAtoByte(char c1)
+            {
+                switch (c1)
+                {
+                    case 'A':
+                        return 0;
+                    case 'C':
+                        return 1;
+                    case 'G':
+                        return 2;
+                    case 'T':
+                        return 3;
+                }
+
+                return 4;
             }
-            return 4;
+
+            byte RNAtoByte(char c1)
+            {
+                switch (c1)
+                {
+                    case '_': //STOP in RNA
+                        return 0;
+                }
+
+                return 4;
+            }
+
+            if (isRNA)
+                return RNAtoByte(c);
+
+            return DNAtoByte(c);
         }
 
         private static char ByteToDNA(byte b) {

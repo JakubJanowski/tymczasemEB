@@ -4,41 +4,58 @@ using DNA;
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Lifetime;
 
 namespace projekt1 {
     class Program {
-        private const string dataDirectory = @"..\..\..\data\set2\";
-        private static bool printHelp = false;
+        private const string DataDirectory = @"..\..\..\data\set2\";
+        private static bool _printHelp = false;
 
         static void Main(string[] args) {
             ParserResult<Options> p = Parser.Default.ParseArguments<Options>(args)
               .WithParsed(opts => Run(opts));
             
-            if(printHelp)
+            if(_printHelp)
                 Console.WriteLine(HelpText.AutoBuild(p));
+
+            Console.ReadKey();
+
         }
 
         private static void Run(Options options) {
+
             if (!ValidateOptions(options)) {
-                printHelp = true;
+                _printHelp = true;
                 return;
             }
 
-            string sequence1 = File.ReadAllText(options.Sequence1Path);
-            string sequence2 = File.ReadAllText(options.Sequence2Path);
+            string sequence1;
+            string sequence2;
+
+            if (options.IsRNA) {
+                sequence1 = File.ReadAllText(DataDirectory + "sequence1Rna.txt");
+                sequence2 = File.ReadAllText(DataDirectory + "sequence2Rna.txt");
+            }
+            else {
+                sequence1 = File.ReadAllText(options.Sequence1Path);
+                sequence2 = File.ReadAllText(options.Sequence2Path);
+            }
+
             int[,] distanceMatrix = null;
             int[,] similiarityMatrix = null;
 
             if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
-                distanceMatrix = GetMatrix(dataDirectory + "distanceMatrix.txt");
+                distanceMatrix = GetMatrix(DataDirectory + "distanceMatrix.txt", 5);
 
             if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
-                similiarityMatrix = GetMatrix(dataDirectory + "similiarityMatrix.txt");
+                similiarityMatrix = options.IsRNA
+                    ? GetMatrix(DataDirectory + "similiarityMatrixRna.txt", 21)
+                    : GetMatrix(DataDirectory + "similiarityMatrix.txt", 5);
 
             DNAMatcher matcher = new DNAMatcher(sequence1, sequence2, distanceMatrix, similiarityMatrix, options.IsRNA);
             string[] matching;
 
-            if (distanceMatrix != null) {
+            if (distanceMatrix != null && !options.IsRNA) {
                 int editDistance = matcher.ComputeEditDistance(out matching);
                 PrintMatching(matching);
                 Console.WriteLine($"Optimal edit distance: {editDistance}\n");
@@ -65,13 +82,13 @@ namespace projekt1 {
             return true;
         }
 
-        private static int[,] GetMatrix(string filepath) {
+        private static int[,] GetMatrix(string filepath, int matrixSize) {
             string[] matrixLines = File.ReadAllLines(filepath);
-            int[,] matrix = new int[5, 5];
+            int[,] matrix = new int[matrixSize, matrixSize];
 
-            for (int y = 0; y < 5; y++) {
+            for (int y = 0; y < matrixSize; y++) {
                 int[] row = matrixLines[y].Split(new char[] { ' ' }).Select(s => int.Parse(s)).ToArray();
-                for (int x = 0; x < 5; x++)
+                for (int x = 0; x < matrixSize; x++)
                     matrix[y, x] = row[x];
             }
             return matrix;
