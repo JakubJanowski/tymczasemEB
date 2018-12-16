@@ -29,17 +29,8 @@ namespace projekt1 {
                 return;
             }
 
-            string sequence1;
-            string sequence2;
-
-            if (options.IsRNA) {
-                sequence1 = File.ReadAllText(DataDirectory + "sequence1Rna.txt");
-                sequence2 = File.ReadAllText(DataDirectory + "sequence2Rna.txt");
-            }
-            else {
-                sequence1 = File.ReadAllText(options.Sequence1Path);
-                sequence2 = File.ReadAllText(options.Sequence2Path);
-            }
+            string sequence1 = File.ReadAllText(options.Sequence1Path);
+            string sequence2 = File.ReadAllText(options.Sequence2Path);
 
             int[,] distanceMatrix = null;
             int[,] similiarityMatrix = null;

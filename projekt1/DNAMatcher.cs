@@ -11,6 +11,8 @@ namespace DNA {
         private readonly byte[] w;  // sequence2
         private readonly int[,] d;  // distanceMatrix
         private readonly int[,] s;  // similiarityMatrix
+        private readonly string sequence1;
+        private readonly string sequence2;
 
         private int[,] D;           // edit distances matrix
         private int[,] S;           // similiarities matrix
@@ -126,6 +128,8 @@ namespace DNA {
             d = distanceMatrix;
             s = similiarityMatrix;
             this.isRNA = isRNA;
+            this.sequence1 = sequence1;
+            this.sequence2 = sequence2;
         }
 
         public int ComputeEditDistance(out string[] matching) {
@@ -161,9 +165,6 @@ namespace DNA {
         }
 
         public int ComputeSimiliarity(out string[] matching) {
-            //if (isRNA)
-            //    return ComputeRNASimiliarity(out matching);
-
             int n = u.Length;
             int m = w.Length;
             S = new int[n + 1, m + 1];
@@ -191,19 +192,16 @@ namespace DNA {
                 }
             }
 
-            // TODO for RNA
             similiarityMatrixExists = true;
+            //TODO print or not for RNA?
             PrintMatrix(S);
 
-            // TODO for RNA
-            matching = GetMatching(S, MatchingType.Maximal);
+            if (isRNA)
+                matching = GetMatchingRNA(S, MatchingType.Maximal);
+            else 
+                matching = GetMatching(S, MatchingType.Maximal);
 
             return S[n, m];
-        }
-
-        private int ComputeRNASimiliarity(out string[] matching) {
-            matching = null;
-            return 0;
         }
 
         public int ComputeLocalMatching(out string[] matching) {
@@ -224,7 +222,11 @@ namespace DNA {
                 }
             }
 
-            matching = GetMatching(S, MatchingType.Maximal, true, x, y);
+
+            if (isRNA)
+                matching = GetMatchingRNA(S, MatchingType.Maximal, true, x, y);
+            else
+                matching = GetMatching(S, MatchingType.Maximal, true, x, y);
 
             return max;
         }
@@ -258,7 +260,7 @@ namespace DNA {
                         return 0;
                 }
 
-                return 4;
+                return 30; // Not allowed, should throw exception
             }
 
             if (isRNA)
@@ -310,31 +312,86 @@ namespace DNA {
             int lastX = x;
             int lastY = y;
 
-            StringBuilder sequence1 = new StringBuilder();
-            StringBuilder sequence2 = new StringBuilder();
+            StringBuilder outSequence1 = new StringBuilder();
+            StringBuilder outSequence2 = new StringBuilder();
 
             while ((x != 0 && y != 0) || (stopAtNonPositive && matrix[x, y] > 0)) {
                 GetNextField(matrix, matchingType, ref x, ref y);
 
                 if (x == lastX) {
-                    sequence1.Insert(0, '_');
-                    sequence2.Insert(0, ByteToDNA(w[y]));    // z nierówności trójkąta będzie działać
+                    outSequence1.Insert(0, '_');
+                    outSequence2.Insert(0, ByteToDNA(w[y]));    // z nierówności trójkąta będzie działać
                 }
                 else if (y == lastY) {
-                    sequence1.Insert(0, ByteToDNA(u[x]));
-                    sequence2.Insert(0, '_');
+                    outSequence1.Insert(0, ByteToDNA(u[x]));
+                    outSequence2.Insert(0, '_');
                 }
                 else {
-                    sequence1.Insert(0, ByteToDNA(u[x]));
-                    sequence2.Insert(0, ByteToDNA(w[y]));
+                    outSequence1.Insert(0, ByteToDNA(u[x]));
+                    outSequence2.Insert(0, ByteToDNA(w[y]));
                 }
 
                 lastX = x;
                 lastY = y;
             }
 
-            return new string[] { sequence1.ToString(), sequence2.ToString() };
+            return new string[] { outSequence1.ToString(), outSequence2.ToString() };
         }
+
+        private string[] GetMatchingRNA(int[,] matrix, MatchingType matchingType, bool stopAtNonPositive = false, int? startX = null, int? startY = null)
+        {
+            int x = startX ?? n;
+            int y = startY ?? m;
+            int lastX = x;
+            int lastY = y;
+
+            int s1 = x * 3 - 1; // 3 chars for amino
+            int s2 = y * 3 - 1;
+
+
+            StringBuilder outSequence1 = new StringBuilder();
+            StringBuilder outSequence2 = new StringBuilder();
+
+            while ((x != 0 && y != 0) || (stopAtNonPositive && matrix[x, y] > 0))
+            {
+                GetNextField(matrix, matchingType, ref x, ref y);
+
+                if (x == lastX)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        outSequence1.Insert(0, "_");
+                        outSequence2.Insert(0, sequence2[s2]);
+                        s2--;
+                    }
+                }
+                else if (y == lastY)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        outSequence1.Insert(0, sequence1[s1]);
+                        outSequence2.Insert(0, "_");
+                        s1--;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        outSequence1.Insert(0, sequence1[s1]);
+                        outSequence2.Insert(0, sequence2[s2]);
+                        s1--;
+                        s2--;
+                    }
+                }
+
+                lastX = x;
+                lastY = y;
+            }
+
+            return new string[] { outSequence1.ToString(), outSequence2.ToString() };
+        }
+
 
         private static void GetNextField(int[,] matrix, MatchingType matchingType, ref int x, ref int y) {
             if (x == 0) {
