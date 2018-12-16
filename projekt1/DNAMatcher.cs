@@ -45,25 +45,8 @@ namespace DNA {
             None
         }
 
-        public DNAMatcher(string sequence1, string sequence2, int[,] distanceMatrix, int[,] similiarityMatrix, bool isRNA = false) {
-            if (isRNA) {
-                u = sequence1.Select(c => RNAToByte(c)).ToArray();
-                w = sequence2.Select(c => RNAToByte(c)).ToArray();
-            }
-            else {
-                u = sequence1.Select(c => DNAToByte(c)).ToArray();
-                w = sequence2.Select(c => DNAToByte(c)).ToArray();
-            }
-            n = u.Length;
-            m = w.Length;
-            d = distanceMatrix;
-            s = similiarityMatrix;
-            this.isRNA = isRNA;
-        }
-
-        private byte RNAToByte(char c) {
-            Dictionary<string, AminoAcids> dict = new Dictionary<string, AminoAcids>() {
-                { "UUU", AminoAcids.Phe},
+        private static Dictionary<string, AminoAcids> aminoAcidCodons = new Dictionary<string, AminoAcids>() {
+                {"UUU", AminoAcids.Phe},
                 {"UUC", AminoAcids.Phe},
                 {"UUA", AminoAcids.Leu},
                 {"UUG", AminoAcids.Leu},
@@ -126,8 +109,23 @@ namespace DNA {
                 {"GGU", AminoAcids.Gly},
                 {"GGC", AminoAcids.Gly},
                 {"GGA", AminoAcids.Gly},
-                {"GGG", AminoAcids.Gly}};
-            return 0;
+                {"GGG", AminoAcids.Gly}
+        };
+
+        public DNAMatcher(string sequence1, string sequence2, int[,] distanceMatrix, int[,] similiarityMatrix, bool isRNA = false) {
+            if (isRNA) {
+                u = sequence1.SplitInParts(3).Select(s => RNAToByte(s)).ToArray();
+                w = sequence2.SplitInParts(3).Select(s => RNAToByte(s)).ToArray();
+            }
+            else {
+                u = sequence1.Select(c => DNAToByte(c)).ToArray();
+                w = sequence2.Select(c => DNAToByte(c)).ToArray();
+            }
+            n = u.Length;
+            m = w.Length;
+            d = distanceMatrix;
+            s = similiarityMatrix;
+            this.isRNA = isRNA;
         }
 
         public int ComputeEditDistance(out string[] matching) {
@@ -254,6 +252,10 @@ namespace DNA {
                     return 'T';
             }
             return '_';
+        }
+
+        private byte RNAToByte(string codon) {
+            return (byte)aminoAcidCodons[codon];
         }
 
         private void PrintMatrix(int[,] M) {
