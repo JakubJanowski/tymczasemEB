@@ -4,41 +4,48 @@ using DNA;
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Lifetime;
 
 namespace projekt1 {
     class Program {
-        private const string dataDirectory = @"..\..\..\data\set2\";
-        private static bool printHelp = false;
+        private static bool _printHelp = false;
 
         static void Main(string[] args) {
             ParserResult<Options> p = Parser.Default.ParseArguments<Options>(args)
               .WithParsed(opts => Run(opts));
             
-            if(printHelp)
+            if(_printHelp)
                 Console.WriteLine(HelpText.AutoBuild(p));
+
+            Console.ReadKey();
+
         }
 
         private static void Run(Options options) {
+
             if (!ValidateOptions(options)) {
-                printHelp = true;
+                _printHelp = true;
                 return;
             }
 
             string sequence1 = File.ReadAllText(options.Sequence1Path);
             string sequence2 = File.ReadAllText(options.Sequence2Path);
+
             int[,] distanceMatrix = null;
             int[,] similiarityMatrix = null;
 
             if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
-                distanceMatrix = GetMatrix(dataDirectory + "distanceMatrix.txt");
+                distanceMatrix = GetMatrix(options.DistanceMatrixPath, 5);
 
-            if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
-                similiarityMatrix = GetMatrix(dataDirectory + "similiarityMatrix.txt");
+            if (!string.IsNullOrWhiteSpace(options.SimiliarityMatrixPath))
+                similiarityMatrix = options.IsRNA
+                    ? GetMatrix(options.SimiliarityMatrixPath, 21)
+                    : GetMatrix(options.SimiliarityMatrixPath, 5);
 
             DNAMatcher matcher = new DNAMatcher(sequence1, sequence2, distanceMatrix, similiarityMatrix, options.IsRNA);
             string[] matching;
 
-            if (distanceMatrix != null) {
+            if (distanceMatrix != null && !options.IsRNA) {
                 int editDistance = matcher.ComputeEditDistance(out matching);
                 PrintMatching(matching);
                 Console.WriteLine($"Optimal edit distance: {editDistance}\n");
@@ -49,9 +56,11 @@ namespace projekt1 {
                 PrintMatching(matching);
                 Console.WriteLine($"Optimal global similiarity: {similiarity}\n");
 
-                int localSimiliarity = matcher.ComputeLocalMatching(out matching);
-                PrintMatching(matching);
-                Console.WriteLine($"Optimal local similiarity: {localSimiliarity}\n");
+                if (!options.IsRNA) {
+                    int localSimiliarity = matcher.ComputeLocalMatching(out matching);
+                    PrintMatching(matching);
+                    Console.WriteLine($"Optimal local similiarity: {localSimiliarity}\n");
+                }
             }
 
             Console.ReadKey();
@@ -65,13 +74,13 @@ namespace projekt1 {
             return true;
         }
 
-        private static int[,] GetMatrix(string filepath) {
+        private static int[,] GetMatrix(string filepath, int matrixSize) {
             string[] matrixLines = File.ReadAllLines(filepath);
-            int[,] matrix = new int[5, 5];
+            int[,] matrix = new int[matrixSize, matrixSize];
 
-            for (int y = 0; y < 5; y++) {
+            for (int y = 0; y < matrixSize; y++) {
                 int[] row = matrixLines[y].Split(new char[] { ' ' }).Select(s => int.Parse(s)).ToArray();
-                for (int x = 0; x < 5; x++)
+                for (int x = 0; x < matrixSize; x++)
                     matrix[y, x] = row[x];
             }
             return matrix;
@@ -79,8 +88,10 @@ namespace projekt1 {
 
         private static void PrintMatching(string[] matching) {
             Console.WriteLine();
-            Console.WriteLine(matching[0]);
-            Console.WriteLine(matching[1]);
+            if (matching != null) {
+                Console.WriteLine(matching[0]);
+                Console.WriteLine(matching[1]);
+            }
             Console.WriteLine();
         }
     }

@@ -11,6 +11,8 @@ namespace DNA {
         private readonly byte[] w;  // sequence2
         private readonly int[,] d;  // distanceMatrix
         private readonly int[,] s;  // similiarityMatrix
+        private readonly string sequence1;
+        private readonly string sequence2;
 
         private int[,] D;           // edit distances matrix
         private int[,] S;           // similiarities matrix
@@ -118,14 +120,16 @@ namespace DNA {
                 w = sequence2.SplitInParts(3).Select(s => RNAToByte(s)).ToArray();
             }
             else {
-                u = sequence1.Select(c => DNAToByte(c)).ToArray();
-                w = sequence2.Select(c => DNAToByte(c)).ToArray();
+                u = sequence1.Select(c => CharToByte(c)).ToArray();
+                w = sequence2.Select(c => CharToByte(c)).ToArray();
             }
             n = u.Length;
             m = w.Length;
             d = distanceMatrix;
             s = similiarityMatrix;
             this.isRNA = isRNA;
+            this.sequence1 = sequence1;
+            this.sequence2 = sequence2;
         }
 
         public int ComputeEditDistance(out string[] matching) {
@@ -134,13 +138,13 @@ namespace DNA {
 
             for (int j = 1; j <= m; j++) {
                 for (int k = 0; k < j; k++) {
-                    D[0, j] += d[DNAToByte('_'), w[k]];
+                    D[0, j] += d[CharToByte('_'), w[k]];
                 }
             }
 
             for (int i = 1; i <= n; i++) {
                 for (int k = 0; k < i; k++) {
-                    D[i, 0] += d[u[k], DNAToByte('_')];
+                    D[i, 0] += d[u[k], CharToByte('_')];
                 }
             }
 
@@ -148,8 +152,8 @@ namespace DNA {
                 for (int j = 1; j <= m; j++) {
                     D[i, j] = Math.Min(
                         D[i - 1, j - 1] + d[u[i - 1], w[j - 1]], Math.Min(
-                        D[i, j - 1] + d[DNAToByte('_'), w[j - 1]],
-                        D[i - 1, j] + d[u[i - 1], DNAToByte('_')]));
+                        D[i, j - 1] + d[CharToByte('_'), w[j - 1]],
+                        D[i - 1, j] + d[u[i - 1], CharToByte('_')]));
                 }
             }
 
@@ -161,9 +165,41 @@ namespace DNA {
         }
 
         public int ComputeSimiliarity(out string[] matching) {
-            if (isRNA)
-                return ComputeRNASimiliarity(out matching);
+            if (!isRNA)
+                return ComputeSequenceSimiliarity(out matching, u, w);
 
+            //todo stop jest spacją
+
+            bool found = false;
+            int bestResult = int.MinValue;
+            Sequence uBestSubsequence = null;
+            Sequence wBestSubsequence = null;
+            int[,] bestS = null;
+            Sequence[] uSequences = u.FindAminoAcidSequences((byte)AminoAcids.Met, (byte)AminoAcids.STOP).ToArray();
+            Sequence[] wSequences = w.FindAminoAcidSequences((byte)AminoAcids.Met, (byte)AminoAcids.STOP).ToArray();
+            foreach (Sequence uSequence in uSequences) {
+                foreach (Sequence wSequence in wSequences) {
+                    int result = ComputeSequenceSimiliarityRNA(uSequence.data, wSequence.data);
+                    if(result > bestResult) {
+                        found = true;
+                        bestResult = result;
+                        uBestSubsequence = uSequence;
+                        wBestSubsequence = wSequence;
+                        bestS = S.Clone() as int[,];
+                    }
+                }
+            }
+
+            if(!found) {
+                matching = null;
+                return int.MinValue;
+            }
+
+            matching = GetMatchingRNA(bestS, MatchingType.Maximal, uBestSubsequence, wBestSubsequence);
+            return bestResult;
+        }
+
+        private int ComputeSequenceSimiliarity(out string[] matching, byte[] u, byte[] w) {
             int n = u.Length;
             int m = w.Length;
             S = new int[n + 1, m + 1];
@@ -171,13 +207,13 @@ namespace DNA {
 
             for (int j = 1; j <= m; j++) {
                 for (int k = 0; k < j; k++) {
-                    S[0, j] += s[DNAToByte('_'), w[k]];
+                    S[0, j] += s[CharToByte('_'), w[k]];
                 }
             }
 
             for (int i = 1; i <= n; i++) {
                 for (int k = 0; k < i; k++) {
-                    S[i, 0] += s[u[k], DNAToByte('_')];
+                    S[i, 0] += s[u[k], CharToByte('_')];
                 }
             }
 
@@ -185,22 +221,52 @@ namespace DNA {
                 for (int j = 1; j <= m; j++) {
                     S[i, j] = Math.Max(
                         S[i - 1, j - 1] + s[u[i - 1], w[j - 1]], Math.Max(
-                        S[i, j - 1] + s[DNAToByte('_'), w[j - 1]],
-                        S[i - 1, j] + s[u[i - 1], DNAToByte('_')]));
+                            S[i, j - 1] + s[CharToByte('_'), w[j - 1]],
+                            S[i - 1, j] + s[u[i - 1], CharToByte('_')]));
+
                 }
             }
 
             similiarityMatrixExists = true;
+            //TODO print or not for RNA?
             PrintMatrix(S);
-
+            
             matching = GetMatching(S, MatchingType.Maximal);
 
             return S[n, m];
         }
 
-        private int ComputeRNASimiliarity(out string[] matching) {
-            matching = null;
-            return 0;
+        private int ComputeSequenceSimiliarityRNA(byte[] u, byte[] w) {
+            int n = u.Length;
+            int m = w.Length;
+            S = new int[n + 1, m + 1];
+            S[0, 0] = 0;
+
+            for (int j = 1; j <= m; j++) {
+                for (int k = 0; k < j; k++) {
+                    S[0, j] += s[CharToByte('_'), w[k]];
+                }
+            }
+
+            for (int i = 1; i <= n; i++) {
+                for (int k = 0; k < i; k++) {
+                    S[i, 0] += s[u[k], CharToByte('_')];
+                }
+            }
+
+            for (int i = 1; i <= n; i++) {
+                for (int j = 1; j <= m; j++) {
+                    S[i, j] = Math.Max(
+                        S[i - 1, j - 1] + s[u[i - 1], w[j - 1]], Math.Max(
+                            S[i, j - 1] + s[CharToByte('_'), w[j - 1]],
+                            S[i - 1, j] + s[u[i - 1], CharToByte('_')]));
+
+                }
+            }
+
+            similiarityMatrixExists = true;
+
+            return S[n, m];
         }
 
         public int ComputeLocalMatching(out string[] matching) {
@@ -221,23 +287,43 @@ namespace DNA {
                 }
             }
 
-            matching = GetMatching(S, MatchingType.Maximal, true, x, y);
+            if (isRNA)
+                matching = null;// GetMatchingRNA(S, MatchingType.Maximal, true, x, y);
+            else
+                matching = GetMatching(S, MatchingType.Maximal, true, x, y);
 
             return max;
         }
 
-        private static byte DNAToByte(char c) {
-            switch (c) {
-                case 'A':
-                    return 0;
-                case 'C':
-                    return 1;
-                case 'G':
-                    return 2;
-                case 'T':
-                    return 3;
+
+
+        private byte CharToByte(char c) {
+            byte DNAtoByte(char c1) {
+                switch (c1) {
+                    case 'A':
+                        return 0;
+                    case 'C':
+                        return 1;
+                    case 'G':
+                        return 2;
+                    case 'T':
+                        return 3;
+                }
+
+                return 4;
             }
-            return 4;
+
+            byte RNAtoByte(char c1) {
+                if (c1 == '_')
+                    return (byte)AminoAcids.STOP;
+
+                throw new Exception();
+            }
+
+            if (isRNA)
+                return RNAtoByte(c);
+
+            return DNAtoByte(c);
         }
 
         private static char ByteToDNA(byte b) {
@@ -283,31 +369,72 @@ namespace DNA {
             int lastX = x;
             int lastY = y;
 
-            StringBuilder sequence1 = new StringBuilder();
-            StringBuilder sequence2 = new StringBuilder();
+            StringBuilder outSequence1 = new StringBuilder();
+            StringBuilder outSequence2 = new StringBuilder();
 
-            while ((x != 0 && y != 0) || (stopAtNonPositive && matrix[x, y] > 0)) {
+            while ((x != 0 || y != 0) || (stopAtNonPositive && matrix[x, y] > 0)) {
                 GetNextField(matrix, matchingType, ref x, ref y);
 
                 if (x == lastX) {
-                    sequence1.Insert(0, '_');
-                    sequence2.Insert(0, ByteToDNA(w[y]));    // z nierówności trójkąta będzie działać
+                    outSequence1.Insert(0, '_');
+                    outSequence2.Insert(0, ByteToDNA(w[y]));    // z nierówności trójkąta będzie działać
                 }
                 else if (y == lastY) {
-                    sequence1.Insert(0, ByteToDNA(u[x]));
-                    sequence2.Insert(0, '_');
+                    outSequence1.Insert(0, ByteToDNA(u[x]));
+                    outSequence2.Insert(0, '_');
                 }
                 else {
-                    sequence1.Insert(0, ByteToDNA(u[x]));
-                    sequence2.Insert(0, ByteToDNA(w[y]));
+                    outSequence1.Insert(0, ByteToDNA(u[x]));
+                    outSequence2.Insert(0, ByteToDNA(w[y]));
                 }
 
                 lastX = x;
                 lastY = y;
             }
 
-            return new string[] { sequence1.ToString(), sequence2.ToString() };
+            return new string[] { outSequence1.ToString(), outSequence2.ToString() };
         }
+
+        private string[] GetMatchingRNA(int[,] matrix, MatchingType matchingType, Sequence uSequence, Sequence wSequence) {
+            int x = uSequence.data.Length;
+            int y = wSequence.data.Length;
+            int lastX = x;
+            int lastY = y;
+
+            int stopSeq1 = (x + uSequence.index) * 3; // 3 chars for amino
+            int stopSeq2 = (y + wSequence.index) * 3;
+
+
+            StringBuilder outSequence1 = new StringBuilder();
+            StringBuilder outSequence2 = new StringBuilder();
+
+            while ((x != 0 || y != 0) || matrix[x, y] > 0) {
+                GetNextField(matrix, matchingType, ref x, ref y);
+
+                if (x == lastX) {
+                    stopSeq2 -= 3;
+                    outSequence1.Insert(0, "___");
+                    outSequence2.Insert(0, sequence2.Substring(stopSeq2, 3));
+                }
+                else if (y == lastY) {
+                    stopSeq1 -= 3;
+                    outSequence1.Insert(0, sequence1.Substring(stopSeq1, 3));
+                    outSequence2.Insert(0, "___");
+                }
+                else {
+                    stopSeq1 -= 3;
+                    stopSeq2 -= 3;
+                    outSequence1.Insert(0, sequence1.Substring(stopSeq1, 3));
+                    outSequence2.Insert(0, sequence2.Substring(stopSeq2, 3));
+                }
+
+                lastX = x;
+                lastY = y;
+            }
+
+            return new string[] { outSequence1.ToString(), outSequence2.ToString() };
+        }
+
 
         private static void GetNextField(int[,] matrix, MatchingType matchingType, ref int x, ref int y) {
             if (x == 0) {
