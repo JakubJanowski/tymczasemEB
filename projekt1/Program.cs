@@ -8,7 +8,6 @@ using System.Runtime.Remoting.Lifetime;
 
 namespace projekt1 {
     class Program {
-        private const string DataDirectory = @"..\..\..\data\set2\";
         private static bool _printHelp = false;
 
         static void Main(string[] args) {
@@ -36,12 +35,12 @@ namespace projekt1 {
             int[,] similiarityMatrix = null;
 
             if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
-                distanceMatrix = GetMatrix(DataDirectory + "distanceMatrix.txt", 5);
+                distanceMatrix = GetMatrix(options.DistanceMatrixPath, 5);
 
-            if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
+            if (!string.IsNullOrWhiteSpace(options.SimiliarityMatrixPath))
                 similiarityMatrix = options.IsRNA
-                    ? GetMatrix(DataDirectory + "similiarityMatrixRna.txt", 21)
-                    : GetMatrix(DataDirectory + "similiarityMatrix.txt", 5);
+                    ? GetMatrix(options.SimiliarityMatrixPath, 21)
+                    : GetMatrix(options.SimiliarityMatrixPath, 5);
 
             DNAMatcher matcher = new DNAMatcher(sequence1, sequence2, distanceMatrix, similiarityMatrix, options.IsRNA);
             string[] matching;
@@ -57,9 +56,11 @@ namespace projekt1 {
                 PrintMatching(matching);
                 Console.WriteLine($"Optimal global similiarity: {similiarity}\n");
 
-                int localSimiliarity = matcher.ComputeLocalMatching(out matching);
-                PrintMatching(matching);
-                Console.WriteLine($"Optimal local similiarity: {localSimiliarity}\n");
+                if (!options.IsRNA) {
+                    int localSimiliarity = matcher.ComputeLocalMatching(out matching);
+                    PrintMatching(matching);
+                    Console.WriteLine($"Optimal local similiarity: {localSimiliarity}\n");
+                }
             }
 
             Console.ReadKey();
@@ -87,8 +88,10 @@ namespace projekt1 {
 
         private static void PrintMatching(string[] matching) {
             Console.WriteLine();
-            Console.WriteLine(matching[0]);
-            Console.WriteLine(matching[1]);
+            if (matching != null) {
+                Console.WriteLine(matching[0]);
+                Console.WriteLine(matching[1]);
+            }
             Console.WriteLine();
         }
     }
