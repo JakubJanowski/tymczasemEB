@@ -1,7 +1,8 @@
-﻿using System;
+﻿using Models;
+using System;
 using System.Collections.Generic;
 
-namespace DNA {
+namespace Utilities {
     static class Extensions {
         public static IEnumerable<string> SplitInParts(this string text, int partLength) {
             if (text is null)

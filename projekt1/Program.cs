@@ -1,10 +1,9 @@
 ﻿using CommandLine;
 using CommandLine.Text;
-using DNA;
+using Matcher;
 using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.Remoting.Lifetime;
 
 namespace projekt1 {
     class Program {
@@ -13,8 +12,8 @@ namespace projekt1 {
         static void Main(string[] args) {
             ParserResult<Options> p = Parser.Default.ParseArguments<Options>(args)
               .WithParsed(opts => Run(opts));
-            
-            if(_printHelp)
+
+            if (_printHelp)
                 Console.WriteLine(HelpText.AutoBuild(p));
 
             Console.ReadKey();
@@ -33,37 +32,49 @@ namespace projekt1 {
 
             int[,] distanceMatrix = null;
             int[,] similiarityMatrix = null;
+            IMatcher matcher;
 
-            if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
-                distanceMatrix = GetMatrix(options.DistanceMatrixPath, 5);
+            if (options.IsRNA) {
+                if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
+                    distanceMatrix = GetMatrix(options.DistanceMatrixPath, 21);
+                if (!string.IsNullOrWhiteSpace(options.SimiliarityMatrixPath))
+                    similiarityMatrix = GetMatrix(options.SimiliarityMatrixPath, 21);
+                matcher = new RNAMatcher(sequence1, sequence2, distanceMatrix, similiarityMatrix);
+            }
+            else {
+                if (!string.IsNullOrWhiteSpace(options.DistanceMatrixPath))
+                    distanceMatrix = GetMatrix(options.DistanceMatrixPath, 5);
+                if (!string.IsNullOrWhiteSpace(options.SimiliarityMatrixPath))
+                    similiarityMatrix = GetMatrix(options.SimiliarityMatrixPath, 5);
+                matcher = new DNAMatcher(sequence1, sequence2, distanceMatrix, similiarityMatrix);
+            }
 
-            if (!string.IsNullOrWhiteSpace(options.SimiliarityMatrixPath))
-                similiarityMatrix = options.IsRNA
-                    ? GetMatrix(options.SimiliarityMatrixPath, 21)
-                    : GetMatrix(options.SimiliarityMatrixPath, 5);
+            matcher.Verbose = options.Verbose;
 
-            DNAMatcher matcher = new DNAMatcher(sequence1, sequence2, distanceMatrix, similiarityMatrix, options.IsRNA);
             string[] matching;
 
-            if (distanceMatrix != null && !options.IsRNA) {
+            if (options.Verbose) {
+                Console.WriteLine("Input sequences:");
+                Console.WriteLine(sequence1);
+                Console.WriteLine(sequence2);
+                Console.WriteLine();
+            }
+
+            if (distanceMatrix != null) {
                 int editDistance = matcher.ComputeEditDistance(out matching);
-                PrintMatching(matching);
                 Console.WriteLine($"Optimal edit distance: {editDistance}\n");
+                PrintMatching(matching);
             }
 
             if (similiarityMatrix != null) {
                 int similiarity = matcher.ComputeSimiliarity(out matching);
-                PrintMatching(matching);
                 Console.WriteLine($"Optimal global similiarity: {similiarity}\n");
+                PrintMatching(matching);
 
-                if (!options.IsRNA) {
-                    int localSimiliarity = matcher.ComputeLocalMatching(out matching);
-                    PrintMatching(matching);
-                    Console.WriteLine($"Optimal local similiarity: {localSimiliarity}\n");
-                }
+                int localSimiliarity = matcher.ComputeLocalSimiliarity(out matching);
+                Console.WriteLine($"Optimal local similiarity: {localSimiliarity}\n");
+                PrintMatching(matching);
             }
-
-            Console.ReadKey();
         }
 
         private static bool ValidateOptions(Options options) {
@@ -75,23 +86,39 @@ namespace projekt1 {
         }
 
         private static int[,] GetMatrix(string filepath, int matrixSize) {
-            string[] matrixLines = File.ReadAllLines(filepath);
-            int[,] matrix = new int[matrixSize, matrixSize];
+            string[] matrixLines;
+            int[,] matrix;
 
-            for (int y = 0; y < matrixSize; y++) {
-                int[] row = matrixLines[y].Split(new char[] { ' ' }).Select(s => int.Parse(s)).ToArray();
-                for (int x = 0; x < matrixSize; x++)
-                    matrix[y, x] = row[x];
+            try {
+                 matrixLines = File.ReadAllLines(filepath);
+            } catch (Exception) {
+                Console.WriteLine($"[Error] Could not read file {filepath}\n");
+                return null;
             }
+
+            try {
+                matrix = new int[matrixSize, matrixSize];
+                for (int y = 0; y < matrixSize; y++) {
+                    int[] row = matrixLines[y].Split(new char[] { ' ' }).Select(s => int.Parse(s)).ToArray();
+                    for (int x = 0; x < matrixSize; x++)
+                        matrix[y, x] = row[x];
+                }
+            } catch(Exception) {
+                Console.WriteLine($"[Error] File {filepath} should contain {matrixSize}x{matrixSize} matrix. Each row should be in different line and each cell in row should be separated by space.\n");
+                return null;
+            }
+
             return matrix;
+
         }
 
         private static void PrintMatching(string[] matching) {
-            Console.WriteLine();
             if (matching != null) {
+                Console.WriteLine("Matching:");
                 Console.WriteLine(matching[0]);
                 Console.WriteLine(matching[1]);
             }
+            Console.WriteLine();
             Console.WriteLine();
         }
     }

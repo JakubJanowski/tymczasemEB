@@ -1,4 +1,4 @@
-﻿namespace DNA {
+﻿namespace Models {
     internal class Sequence {
         public byte[] data;
         public int index;

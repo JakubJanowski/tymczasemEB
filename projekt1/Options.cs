@@ -16,5 +16,8 @@ namespace projekt1 {
 
         [Option('r', "rna", Required = false, HelpText = "Set this flag if input files contain RNA sequence. If not set, the sequences are treated as DNA sequence.")]
         public bool IsRNA { get; set; } = false;
+
+        [Option('v', "verbose", Required = false, HelpText = "Set this flag if edit distance and optimal similiarity matrices should be printed.")]
+        public bool Verbose { get; set; } = false;
     }
 }
