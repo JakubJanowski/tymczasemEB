@@ -15,9 +15,6 @@ namespace projekt1 {
 
             if (_printHelp)
                 Console.WriteLine(HelpText.AutoBuild(p));
-
-            Console.ReadKey();
-
         }
 
         private static void Run(Options options) {
