@@ -5,3 +5,8 @@
 
 -a C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna1\sequence1.txt -b C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna1\sequence2.txt -s C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna1\similiarityMatrix.txt -d C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna1\distanceMatrix.txt -r -v
 -a C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna2\sequence1.txt -b C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna2\sequence2.txt -s C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna2\similiarityMatrix.txt -d C:\Users\jkjan\Desktop\C++\PG\EB\tymczasemEB\data\rna2\distanceMatrix.txt -r -v
+
+projekt2:
+-a C:\Users\student\Source\Repos\tymczasemEB\data\dna3\sequence1.txt -b C:\Users\student\Source\Repos\tymczasemEB\data\dna3\sequence2.txt -s C:\Users\student\Source\Repos\tymczasemEB\data\dna3\similiarityMatrix.txt -p -v
+-a C:\Users\student\Source\Repos\tymczasemEB\data\dna4\sequence1.txt -b C:\Users\student\Source\Repos\tymczasemEB\data\dna4\sequence2.txt -s C:\Users\student\Source\Repos\tymczasemEB\data\dna4\similiarityMatrix.txt -p -v
+-a C:\Users\student\Source\Repos\tymczasemEB\data\dna5\sequence1.txt -b C:\Users\student\Source\Repos\tymczasemEB\data\dna5\sequence2.txt -s C:\Users\student\Source\Repos\tymczasemEB\data\dna5\similiarityMatrix.txt -p -v
