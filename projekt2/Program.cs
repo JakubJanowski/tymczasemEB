@@ -15,9 +15,6 @@ namespace projekt1 {
 
             if (_printHelp)
                 Console.WriteLine(HelpText.AutoBuild(p));
-
-            Console.ReadKey();
-
         }
 
         private static void Run(Options options) {
@@ -34,7 +31,7 @@ namespace projekt1 {
 
             if (!string.IsNullOrWhiteSpace(options.SimiliarityMatrixPath))
                 similiarityMatrix = GetMatrix(options.SimiliarityMatrixPath, 5);
-            DNAMatcher matcher = new DNAMatcher(sequence1, sequence2, similiarityMatrix);
+            DNAMatcher matcher = new DNAMatcher(sequence1, sequence2, similiarityMatrix, options.PenaltyFunctionEnabled);
 
             matcher.Verbose = options.Verbose;
 

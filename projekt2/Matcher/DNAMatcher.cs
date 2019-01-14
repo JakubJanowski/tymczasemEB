@@ -9,19 +9,21 @@ namespace Matcher {
         private readonly byte[] uGlobal;  // sequence1
         private readonly byte[] wGlobal;  // sequence2
         private readonly int[,] s;  // similiarityMatrix
+        private readonly bool usePenalty;
 
         private int[,] S;           // similiarities matrix
 
         public bool Verbose { get; set; } = false;
 
-        public DNAMatcher(string sequence1, string sequence2, int[,] similiarityMatrix) {
+        public DNAMatcher(string sequence1, string sequence2, int[,] similiarityMatrix, bool usePenalty) {
             uGlobal = sequence1.Select(c => DNAToByte(c)).ToArray();
             wGlobal = sequence2.Select(c => DNAToByte(c)).ToArray();
             s = similiarityMatrix;
+            this.usePenalty = usePenalty;
         }
 
         protected int PenaltyFunction(int n) {
-            return -n * n * n;
+            return -1;
         }
 
         public int ComputeSimiliarityWithPenalty(out string[] matching) {
@@ -31,14 +33,10 @@ namespace Matcher {
             int[,] B = new int[n + 1, m + 1];
             int[,] C = new int[n + 1, m + 1];
             S = new int[n + 1, m + 1];
-            for (int i = 0; i <= n; i++) {
-                for (int j = 0; j <= m; j++) {
-                    A[i, j] = int.MinValue;
-                    B[i, j] = int.MinValue;
-                    C[i, j] = int.MinValue;
-                    S[i, j] = int.MinValue;
-                }
-            }
+            for (int i = 0; i <= n; i++)
+                for (int j = 0; j <= m; j++)
+                    A[i, j] = B[i, j] = C[i, j] = S[i, j] = int.MinValue;
+
             S[0, 0] = 0;
             for (int i = 1; i <= n; i++)
                 S[i, 0] = B[i, 0] = PenaltyFunction(i);
@@ -119,9 +117,8 @@ namespace Matcher {
 
                 int[] ScoreL = NWScore(u.SubArray(0, xmid), w);
                 int[] ScoreR = NWScore(u.SubArray(xmid, xlen - xmid).Reverse().ToArray(), w.Reverse().ToArray());
-                for (int i = 0; i < ScoreL.Length; i++) {
+                for (int i = 0; i < ScoreL.Length; i++)
                     ScoreL[i] += ScoreR[ScoreL.Length - i - 1];
-                }
                 int ymid = Array.IndexOf(ScoreL, ScoreL.Max());
 
                 string[] matching1, matching2;
@@ -231,32 +228,55 @@ namespace Matcher {
                 int value = matrix[startField.x, startField.y];
                 int nextValue;
                 int bestNextValue = int.MinValue;
-                int[] possiblePenalties = new int[Math.Max(startField.x, startField.y)];
-                for (int i = 0; i < possiblePenalties.Length; i++) {
-                    if (i == 0)
-                        possiblePenalties[i] = PenaltyFunction(i + 1);
-                    else
-                        possiblePenalties[i] = PenaltyFunction(i + 1) - PenaltyFunction(i);
-                }
 
-                Field field = new Field(startField.x - 1, startField.y - 1);
-                nextValue = matrix[field.x, field.y];
-                if (costMatrix[u[field.x], w[field.y]] + nextValue == value && nextValue > bestNextValue) {   // check if the step is legal
-                    bestNextValue = nextValue;
-                    nextField = field.Clone();
-                }
-                field = new Field(startField.x, startField.y - 1);
-                nextValue = matrix[field.x, field.y];
-                for (int i = 0; i <= field.y; i++) {
-                    if (possiblePenalties[i] + nextValue == value && nextValue > bestNextValue) {
+                if (usePenalty) {
+                    int[] possiblePenalties = new int[Math.Max(startField.x, startField.y)];
+                    for (int i = 0; i < possiblePenalties.Length; i++) {
+                        if (i == 0)
+                            possiblePenalties[i] = PenaltyFunction(i + 1);
+                        else
+                            possiblePenalties[i] = PenaltyFunction(i + 1) - PenaltyFunction(i);
+                    }
+
+                    Field field = new Field(startField.x - 1, startField.y - 1);
+                    nextValue = matrix[field.x, field.y];
+                    if (costMatrix[u[field.x], w[field.y]] + nextValue == value && nextValue > bestNextValue) {   // check if the step is legal
                         bestNextValue = nextValue;
                         nextField = field.Clone();
                     }
+                    field = new Field(startField.x, startField.y - 1);
+                    nextValue = matrix[field.x, field.y];
+                    for (int i = 0; i <= field.y; i++) {
+                        if (possiblePenalties[i] + nextValue == value && nextValue > bestNextValue) {
+                            bestNextValue = nextValue;
+                            nextField = field.Clone();
+                        }
+                    }
+                    field = new Field(startField.x - 1, startField.y);
+                    nextValue = matrix[field.x, field.y];
+                    for (int i = 0; i <= field.x; i++) {
+                        if (possiblePenalties[i] + nextValue == value && nextValue > bestNextValue) {
+                            bestNextValue = nextValue;
+                            nextField = field;
+                        }
+                    }
                 }
-                field = new Field(startField.x - 1, startField.y);
-                nextValue = matrix[field.x, field.y];
-                for (int i = 0; i <= field.x; i++) {
-                    if (possiblePenalties[i] + nextValue == value && nextValue > bestNextValue) {
+                else {
+                    Field field = new Field(startField.x - 1, startField.y - 1);
+                    nextValue = matrix[field.x, field.y];
+                    if (costMatrix[u[field.x], w[field.y]] + nextValue == value && nextValue > bestNextValue) {   // check if the step is legal
+                        bestNextValue = nextValue;
+                        nextField = field.Clone();
+                    }
+                    field = new Field(startField.x, startField.y - 1);
+                    nextValue = matrix[field.x, field.y];
+                    if (costMatrix[DNAToByte('_'), w[field.y]] + nextValue == value && nextValue > bestNextValue) {
+                        bestNextValue = nextValue;
+                        nextField = field.Clone();
+                    }
+                    field = new Field(startField.x - 1, startField.y);
+                    nextValue = matrix[field.x, field.y];
+                    if (costMatrix[u[field.x], DNAToByte('_')] + nextValue == value && nextValue > bestNextValue) {
                         bestNextValue = nextValue;
                         nextField = field;
                     }
