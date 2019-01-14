@@ -231,6 +231,13 @@ namespace Matcher {
                 int value = matrix[startField.x, startField.y];
                 int nextValue;
                 int bestNextValue = int.MinValue;
+                int[] possiblePenalties = new int[Math.Max(startField.x, startField.y)];
+                for (int i = 0; i < possiblePenalties.Length; i++) {
+                    if (i == 0)
+                        possiblePenalties[i] = PenaltyFunction(i + 1);
+                    else
+                        possiblePenalties[i] = PenaltyFunction(i + 1) - PenaltyFunction(i);
+                }
 
                 Field field = new Field(startField.x - 1, startField.y - 1);
                 nextValue = matrix[field.x, field.y];
@@ -240,15 +247,19 @@ namespace Matcher {
                 }
                 field = new Field(startField.x, startField.y - 1);
                 nextValue = matrix[field.x, field.y];
-                if (costMatrix[DNAToByte('_'), w[field.y]] + nextValue == value && nextValue > bestNextValue) {
-                    bestNextValue = nextValue;
-                    nextField = field.Clone();
+                for (int i = 0; i <= field.y; i++) {
+                    if (possiblePenalties[i] + nextValue == value && nextValue > bestNextValue) {
+                        bestNextValue = nextValue;
+                        nextField = field.Clone();
+                    }
                 }
                 field = new Field(startField.x - 1, startField.y);
                 nextValue = matrix[field.x, field.y];
-                if (costMatrix[u[field.x], DNAToByte('_')] + nextValue == value && nextValue > bestNextValue) {
-                    bestNextValue = nextValue;
-                    nextField = field;
+                for (int i = 0; i <= field.x; i++) {
+                    if (possiblePenalties[i] + nextValue == value && nextValue > bestNextValue) {
+                        bestNextValue = nextValue;
+                        nextField = field;
+                    }
                 }
             }
 
